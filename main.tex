@@ -53,22 +53,32 @@
 % {Wenyong Wang}{Professor}
 % {School of Computer Science and Engineering (School of Cyber Security)}
 
-% % 独创性声明：[签名宽度]{日期}{作者签名图片}{导师签名图片}，送审时使用空强制参数即可，仅研究生用
-\declaration[3cm]{}{}{}  % 空白独创性声明
 
-% 开启中文摘要
 \zhabstract
-中文摘要
+随着区块链技术的广泛应用，智能合约已成为去中心化应用的核心，但其安全问题日益突出。由于智能合约承载高价值且部署后通常不可更改，漏洞可能导致巨额经济损失。现有的漏洞检测方法在处理 EVM 字节码层面分析时，面临精度、效率和自动化程度不足的挑战。
+
+针对这些问题，本文聚焦于 EVM 字节码，提出了一种结合轻量级静态分析与符号执行的混合式智能合约漏洞检测方法。首先，深入分析了重入、整数溢出、时间依赖和拒绝服务四种典型漏洞在字节码层面的指令序列和状态转换特征。基于这些特征，设计了一种新型静态分析引导的符号执行策略：利用静态分析（模式匹配与污点分析）快速识别潜在漏洞候选点，并以此引导后续的动态符号执行聚焦于高风险代码路径，有效缓解路径爆炸问题，提升分析效率。
+
+基于该混合方法，本文设计并实现了一个名为 ByteChecker 的原型系统。详细阐述了系统的整体架构、关键模块（包括预处理、核心分析引擎、约束求解器交互）以及针对四种漏洞的具体检测逻辑。
+
+最后，通过在标准数据集和真实世界合约数据集上的实验，对 ByteChecker 进行了全面评估。结果表明，该系统在检测目标漏洞方面具有良好的准确性（总体 F1 分数达到 74.6\%），且分析效率相较于纯符号执行工具有显著提升（平均分析时间减少 27.2\%）。实验验证了静态分析引导机制在平衡检测深度与效率方面的有效性。本研究为字节码层面的智能合约自动化安全审计提供了一种有效可行的新方法。
 
 % 中文关键字
-\zhkeywords{三维重建，彩色结构光，单帧结构光，卷积神经网络}
+\zhkeywords{智能合约安全，漏洞检测，EVM 字节码，静态分析，符号执行，混合分析}
+
 
 % 开启英文摘要
 \enabstract
-english abstract
+With the widespread adoption of blockchain technology, smart contracts have become central to decentralized applications, yet their security vulnerabilities are increasingly prominent. Due to the high value they often manage and their typical immutability after deployment, vulnerabilities can lead to substantial financial losses. Existing vulnerability detection methods face challenges in precision, efficiency, and automation when analyzing Ethereum Virtual Machine (EVM) bytecode.
+
+To address these issues, this paper focuses on EVM bytecode and proposes a hybrid smart contract vulnerability detection method that combines lightweight static analysis with symbolic execution. Firstly, the instruction sequences and state transition characteristics of four typical vulnerabilities—reentrancy, integer overflow, timestamp dependency, and denial of service—at the bytecode level were thoroughly analyzed. Based on these characteristics, a novel static analysis-guided symbolic execution strategy was designed: static analysis (utilizing pattern matching and taint analysis) rapidly identifies potential vulnerability candidates, which then guides subsequent dynamic symbolic execution to focus on high-risk code paths. This approach effectively mitigates the path explosion problem and enhances analysis efficiency.
+
+Based on this hybrid method, a prototype system named ByteChecker was designed and implemented. The paper elaborates on the system's overall architecture, key modules (including preprocessing, core analysis engine, and constraint solver interaction), and the specific detection logic for the four targeted vulnerabilities.
+
+Finally, ByteChecker was comprehensively evaluated through experiments on standard datasets and real-world contract datasets. The results demonstrate that the system achieves good accuracy in detecting the target vulnerabilities (overall F1 score of 74.6\%) and shows a significant improvement in analysis efficiency compared to pure symbolic execution tools (average analysis time reduced by 27.2\%). The experiments validate the effectiveness of the static analysis guidance mechanism in balancing detection depth and efficiency. This research provides an effective and feasible new approach for the automated security auditing of smart contracts at the bytecode level.
 
 % 英文关键字
-\enkeywords{3D Reconstruction, Color Structured Light, Single-shot Structured Light, Convolutional Neural Network}
+\enkeywords{Smart Contract Security, Vulnerability Detection, EVM Bytecode, Static Analysis, Symbolic Execution, Hybrid Analysis}
 
 % 主目录，必要
 \tableofcontents  
@@ -288,7 +298,7 @@ Gas 机制贯穿以太坊的执行逻辑、经济激励与安全控制，是智�
 
 符号执行（Symbolic Execution）是一种用于程序分析与漏洞检测的重要技术\cite{}。与传统动态测试（Dynamic Testing）依赖具体输入值、每次仅探索一条执行路径的策略不同，符号执行以符号变量替代实际输入，通过系统性路径探索实现对程序行为的更全面覆盖。其核心思想在于对程序输入建模为抽象的符号，并在程序执行过程中以符号表达式形式跟踪变量值和路径条件，从而推导出不同输入所引发的多种执行路径。
 
-在符号执行中，程序的输入被表示为一组符号变量（Symbolic Inputs），而非具体的数值。例如，函数参数、用户输入、环境变量等均可视为符号变量的来源。程序在处理这些输入时，不再直接计算出具体值，而是对变量进行符号操作，形成数学或逻辑表达式。由此，符号执行构建出一个“符号状态”（Symbolic State），其中每个程序变量的当前值都是由输入符号变量组合而成的表达式。举例而言，若输入为符号变量 x，执行语句 y = x + 5 后，变量 y 的值将表示为符号表达式 x + 5，而非实际的数值。
+在符号执行中，程序的输入被表示为一组符号变量（Symbolic Inputs），而非具体的数值。例如，函数参数、用户输入、环境变量等均可视为符号变量的来源。程序在处理这些输入时，不再直接计算出具体值，而是对变量进行符号操作，形成数学或逻辑表达式。由此，符号执行构建出一个“符号状态”（Symbolic State），其中每个程序变量的当前值都是由输入符号变量组合而成的表达式。
 
 为正确记录程序执行路径中的分支选择，符号执行维护一个称为路径条件（Path Condition, PC）的逻辑公式\cite{}。该路径条件是输入符号变量所需满足的布尔约束集合，用于描述当前路径的可达性条件。初始路径条件为真（True），表示没有任何输入限制。每当程序执行进入条件分支语句（如 if (condition)），且该条件表达式中含有符号变量时，符号执行引擎会同时探索两个逻辑路径。
 
@@ -373,7 +383,7 @@ Maian\cite{}：专注于检测特定类型合约脆弱性（如 Prodigal、Suici
 \chapter{漏洞原理分析及其检测方法}
 本章将深入剖析智能合约中四种典型且危害严重的安全漏洞：重入漏洞、整数溢出漏洞、时间依赖漏洞和拒绝服务攻击漏洞。对于每种漏洞，本章将详细阐述其产生原理，通过具体的 Solidity 代码示例进行说明，并着重分析其在 EVM 字节码层面的表现特征，并最终提出并论述本研究设计的针对性检测策略。本文漏洞的选取基于以下标准：
 
-（1）现实危害性：这四类漏洞的选择参考了 OWASP智能合约漏洞榜单、DASP安全排行榜以及 SWC安全漏洞目录，以确保所研究问题的现实影响力及经济价值，从而提升研究的实际应用性。
+（1）现实危害性：这四类漏洞的选择参考了 OWASP智能合约漏洞榜单\cite{owasp}、DASP安全排行榜\cite{dasp}以及 SWC安全漏洞目录\cite{swc}，以确保所研究问题的现实影响力及经济价值，从而提升研究的实际应用性。
 
 （2）字节码分析可行性：由于以太坊上的大部分智能合约未公开源代码，本研究将重点关注字节码层面的漏洞检测。因此，所选漏洞应具有较强的字节码分析可行性。重入漏洞、整数溢出漏洞、时间戳依赖漏洞和拒绝服务攻击漏洞均符合这一标准，这一点我们将在本章节的后续分析中详细阐述。
 
@@ -388,7 +398,7 @@ Maian\cite{}：专注于检测特定类型合约脆弱性（如 Prodigal、Suici
 % ...existing code...
 \subsection{重入漏洞原理}
 
-重入漏洞源于智能合约在执行外部调用时，其正常的执行流程被中断并“重入”的安全问题。具体而言，当合约 A 调用外部合约 B（例如，通过 call 发送以太币）时，控制权会暂时转移给合约 B。如果合约 B 被设计为（或本身就是攻击合约）在接收到调用或以太币后，通过其 fallback 或 receive 函数回调合约 A 中的某个函数，而此时合约 A 的状态（如账户余额）尚未更新，那么这次重入的调用就可能再次通过初始的检查，执行关键操作（如提款），导致状态异常或资产被重复提取。
+重入漏洞源于智能合约在执行外部调用时，其正常的执行流程被中断并“重入”的安全问题。具体而言，当合约 A 调用外部合约 B（例如，通过 call 发送以太币）时，控制权会暂时转移给合约 B。如果合约 B 被设计为（或本身就是攻击合约）在接收到调用或以太币后，通过其 fallback 或 receive 函数回调合约 A 中的某个函数，而此时合约 A 的状态（如账户余额）尚未更新，那么这次重入的调用就可能再次通过初始的检查，执行关键操作，导致状态异常或资产被重复提取。
 
 该漏洞的核心在于未能遵循“检查-生效-交互”（Checks-Effects-Interactions）的最佳实践模式。安全的做法应是在执行任何外部调用（交互）之前，完成所有必要的条件检查（检查）并更新合约状态（生效）。然而，在存在重入漏洞的合约中，状态更新操作（如扣减余额的 SSTORE 指令）被置于外部调用（如 CALL 指令）之后。这就为攻击者创造了机会：在状态更新之前，通过外部调用触发回调，重新进入函数，利用未更新的状态再次通过检查，从而反复执行恶意操作。Solidity 中的 call 函数因其允许发送以太币并能触发接收方的代码执行（通过 fallback 或 receive），是导致重入攻击的主要途径。相比之下，delegatecall 通常不涉及此类重入风险，而 staticcall 则禁止状态更改，从而天然免疫此类攻击。因此，不当的外部调用机制、可被利用的回调函数以及错误的状态更新时机共同构成了重入漏洞的成因。
 
@@ -400,7 +410,6 @@ Maian\cite{}：专注于检测特定类型合约脆弱性（如 Prodigal、Suici
     \raggedbottom
     \centering
     \begin{minipage}{0.9\textwidth}
-    % --- 修改这里 ---
     \begin{minted}[
         fontsize=\large,
         linenos,
@@ -559,30 +568,54 @@ Attack 合约用于演示如何利用此漏洞。其构造函数接收 EtherStor
 
 整数溢出漏洞是指由于智能合约编程语言中整数类型的固定位宽限制，当对一个整数变量执行如加法、减法、乘法等算术运算时，其结果超出了该类型能够表示的范围，导致结果被截断或回绕到一个不正确的值，从而引发不可预测的执行逻辑或安全漏洞的问题。
 
-以 Solidity 为例，整型变量的递增规律以  1 字节 64 位为步长递增，具体支持的范围如表 X 所示：
+以 Solidity 为例，整型变量的递增规律以  1 字节 64 位为步长递增，具体支持的范围如表\ref{tab:solidity-integer-types}所示：
 
 \begin{table}[htbp]
     \centering
-    \renewcommand{\arraystretch}{1.3}
+    \caption{Solidity 中常见整数类型的取值范围}
+    \label{tab:solidity-integer-types}
     \begin{tabular}{|c|l|l|}
-    \hline
-    \textbf{类型} & \textbf{有符号范围（int）} & \textbf{无符号范围（uint）} \\
-    \hline
-    \texttt{8位} & $-2^7$ 到 $2^7 - 1$ & $0$ 到 $2^8 - 1$ \\
-    \hline
-    \texttt{16位} & $-2^{15}$ 到 $2^{15} - 1$ & $0$ 到 $2^{16} - 1$ \\
-    \hline
-    \texttt{32位} & $-2^{31}$ 到 $2^{31} - 1$ & $0$ 到 $2^{32} - 1$ \\
-    \hline
-    \texttt{64位} & $-2^{63}$ 到 $2^{63} - 1$ & $0$ 到 $2^{64} - 1$ \\
-    \hline
-    \texttt{128位} & $-2^{127}$ 到 $2^{127} - 1$ & $0$ 到 $2^{128} - 1$ \\
-    \hline
-    \texttt{256位} & $-2^{255}$ 到 $2^{255} - 1$ & $0$ 到 $2^{256} - 1$ \\
-    \hline
+        \hline
+        \textbf{类型} & \textbf{有符号范围（int）} & \textbf{无符号范围（uint）} \\
+        \hline
+        \texttt{8位} & $-2^7$ 到 $2^7 - 1$ & $0$ 到 $2^8 - 1$ \\
+        \hline
+        \texttt{16位} & $-2^{15}$ 到 $2^{15} - 1$ & $0$ 到 $2^{16} - 1$ \\
+        \hline
+        \texttt{32位} & $-2^{31}$ 到 $2^{31} - 1$ & $0$ 到 $2^{32} - 1$ \\
+        \hline
+        \texttt{64位} & $-2^{63}$ 到 $2^{63} - 1$ & $0$ 到 $2^{64} - 1$ \\
+        \hline
+        \texttt{128位} & $-2^{127}$ 到 $2^{127} - 1$ & $0$ 到 $2^{128} - 1$ \\
+        \hline
+        \texttt{256位} & $-2^{255}$ 到 $2^{255} - 1$ & $0$ 到 $2^{256} - 1$ \\
+        \hline
     \end{tabular}
-    \caption{Solidity 中常见整数类型的取值范围对比}
-    \end{table}
+\end{table}
+
+% \begin{table}[htbp]
+%     \centering
+%     \renewcommand{\arraystretch}{1.3}
+%     \begin{tabular}{|c|l|l|}
+%     \hline
+%     \textbf{类型} & \textbf{有符号范围（int）} & \textbf{无符号范围（uint）} \\
+%     \hline
+%     \texttt{8位} & $-2^7$ 到 $2^7 - 1$ & $0$ 到 $2^8 - 1$ \\
+%     \hline
+%     \texttt{16位} & $-2^{15}$ 到 $2^{15} - 1$ & $0$ 到 $2^{16} - 1$ \\
+%     \hline
+%     \texttt{32位} & $-2^{31}$ 到 $2^{31} - 1$ & $0$ 到 $2^{32} - 1$ \\
+%     \hline
+%     \texttt{64位} & $-2^{63}$ 到 $2^{63} - 1$ & $0$ 到 $2^{64} - 1$ \\
+%     \hline
+%     \texttt{128位} & $-2^{127}$ 到 $2^{127} - 1$ & $0$ 到 $2^{128} - 1$ \\
+%     \hline
+%     \texttt{256位} & $-2^{255}$ 到 $2^{255} - 1$ & $0$ 到 $2^{256} - 1$ \\
+%     \hline
+%     \end{tabular}
+%     \caption{Solidity 中常见整数类型的取值范围对比}
+%     \label{tab:solidity-integer-types}
+%     \end{table}
     
 整数溢出漏洞分为上溢和下溢，整数上溢是指数值超过其能存储的最大值，例如 uint256 类型的变量，其表示的范围为 \(0\sim (2^{256}-1)\)，如果将 \((2^{256}-1)\) 与 \(1\) 相加，其结果将由于环回变为 \(0\)。整数下溢的情况相反，当变量是无符号类型时，最小值为0，如果递减将会下溢，从而得到可能的最大值。
 
@@ -595,14 +628,15 @@ Attack 合约用于演示如何利用此漏洞。其构造函数接收 EtherStor
 
 本节将以一个以太坊上经典的溢出攻击作为案例，分析溢出漏洞的形成机制。
 
-2018年4月，BEC智能合约操作黑客攻击，黑客凭空取出大量的BEC代币，并在市场上进行抛售，BEC随即急剧贬值，价值几乎为0，这个攻击中攻击者使用的漏洞正是整数溢出漏洞。
+2018年4月，BEC智能合约操作黑客攻击，黑客凭空取出大量的BEC代币，并在市场上进行抛售，BEC随即急剧贬值，价值几乎为0\cite{}，这个攻击中攻击者使用的漏洞正是整数溢出漏洞。
 
-BEC 合约的地址为 0xC5d105E63711398aF9bbff092d4B6769C82F793D，通过以太坊的区块链浏览器可以提取到 BEC 合约的源代码，BEC 合约整数溢出漏洞点在其中一个用于批量转账的函数上，代码如下：
+BEC 合约的地址为 0xC5d105E63711398aF9bbff092d4B6769C82F793D，通过以太坊的区块链浏览器可以提取到 BEC 合约的源代码，BEC 合约整数溢出漏洞点在其中一个用于批量转账的函数上，代码如图\ref{fig:整数溢出漏洞合约}所示：
+
 
 \begin{figure}[H]
     \centering
     \begin{minipage}{0.9\textwidth}
-    \begin{minted}[fontsize=\large, linenos, numbersep=5pt, xleftmargin=2em]{solidity}
+    \begin{minted}[fontsize=\large, linenos, numbersep=5pt, xleftmargin=0em]{solidity}
 function batchTransfer(
     address[] _receivers, 
     uint256 _value
@@ -621,6 +655,7 @@ function batchTransfer(
     \end{minted}
     \end{minipage}
     \caption{整数溢出漏洞合约}
+    \label{fig:整数溢出漏洞合约}
 \end{figure}
 
 
@@ -664,12 +699,12 @@ function batchTransfer(
 
 由于整数溢出漏洞发生于加、减、乘三种算数运算时，因此对于溢出漏洞的检测应该关注 \texttt{ADD}、\texttt{SUB}、\texttt{MUL} 三条指令。具体来说，当执行到这些算术指令时，符号执行不仅计算符号化的结果，还会
 额外添加表示 “上溢发生” 或 “下溢发生” 的约束到当前路径条件中，例如，对于 c = a + b，添加约束条件为 solve.add(c < a) 或 solve.add(c < b)；对于 c = a - b，添加约束条件为 solve.add(a < b)；对于 c = a * b，添加约束条件为 solve.add(c / a != b)。利用约束求解器检查包含溢出/下溢约束的路径条件是否可满足
-（SAT）。如果 SAT，则说明存在一组输入可以触发该算术运算发生上溢或下溢。算法 X 表示了整数溢出漏洞检测的伪代码，算法的输入为字节码指令序列 I 和符号执行栈快照 S，输出为是否存在潜在整数溢出路径。算法的主要思路是通过符号执行引擎对字节码指令进行遍历，当遇到算术运算指令时，添加相应的约束条件，并使用约束求解器检查路径条件是否可满足。
+（SAT）。如果 SAT，则说明存在一组输入可以触发该算术运算发生上溢或下溢。算法\ref{alg:integer-overflow-detection}表示了整数溢出漏洞检测的伪代码，算法的输入为字节码指令序列 I 和符号执行栈快照 S，输出为是否存在潜在整数溢出路径。算法的主要思路是通过符号执行引擎对字节码指令进行遍历，当遇到算术运算指令时，添加相应的约束条件，并使用约束求解器检查路径条件是否可满足。
 
 
 
 
-\begin{algorithm}[H]
+\begin{algorithm}
     \caption{整数溢出检测伪代码}
     \KwIn{字节码指令序列 $I = \{i_1, i_2, \dots, i_n\}$}
     \KwOut{是否存在潜在整数溢出路径}
@@ -703,6 +738,7 @@ function batchTransfer(
     }
     
     \Return \textbf{False}
+    \label{alg:integer-overflow-detection}
     \end{algorithm}
    
 \section{时间依赖漏洞}
@@ -717,12 +753,12 @@ function batchTransfer(
 \subsection{时间依赖漏洞实例}
 本节我们通过分析一个简单的时间戳依赖智能合约实例，阐述了时间戳漏洞的形成过程及其潜在风险。
 
-如图 X 所示的智能合约实例 \texttt{Timegame}，其核心逻辑为：玩家每次调用 \texttt{spin} 函数时，需要发送 1 ETH 的参与费。合约通过判断当前区块的时间戳是否能被 7 整除来决定是否将合约余额发放给调用者。具体实现如下：
+如图\ref{fig:timestamp-dependency}所示的智能合约实例 Timegame，其核心逻辑为：玩家每次调用 spin 函数时，需要发送 1 ETH 的参与费。合约通过判断当前区块的时间戳是否能被 7 整除来决定是否将合约余额发放给调用者。具体实现如下：
 
 \begin{figure}[H]
     \centering
     \begin{minipage}{0.9\textwidth}
-    \begin{minted}[fontsize=\small, linenos, numbersep=5pt, xleftmargin=2em]{solidity}
+    \begin{minted}[fontsize=\large, linenos, numbersep=5pt, xleftmargin=2em]{solidity}
 contract Timegame {
     uint public lastBlockTime;
     address public luckyUser;
@@ -741,6 +777,7 @@ contract Timegame {
     \end{minted}
     \end{minipage}
     \caption{时间戳依赖漏洞}
+    \label{fig:timestamp-dependency}
 \end{figure}
 
 在此合约中，\texttt{block.timestamp} 被用作判断条件，用以决定是否执行资金转移及更新“幸运用户”状态。 \texttt{lastBlockTime} 用于记录上次合约调用的时间戳，以避免同一区块时间戳重复调用。合约的关键判定逻辑是基于 \texttt{block.timestamp \% 7 == 0}，即当当前时间戳是 7 的倍数时，合约将把所有的资金转移给调用者。此处存在一个潜在的漏洞：矿工可以操控区块时间戳，使其满足该条件，从而使得他们能够在特定时间戳下调用 \texttt{spin} 函数，确保自己获得合约中的所有余额。
@@ -768,7 +805,7 @@ contract Timegame {
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=0.5\linewidth]{时间戳依赖特征}
+    \includegraphics[width=0.3\linewidth]{时间戳依赖特征}
     \caption{时间戳依赖特征}
     \label{fig:时间戳依赖特征}
 \end{figure}
@@ -778,7 +815,7 @@ contract Timegame {
 
 因此检测的方式是：首先检测 TIMESTAMP 指令的使用，标记为潜在风险点，跟踪 TIMESTAMP 指令的结果，在后续的 JUMPI 指令时，检查当前的分支条件是否依赖于 TIMESTAMP 指令及其产生的值，如果是则标记当前分支为受 TIMESTAMP 控制的分支。最后在关键操作如 SSTORE、CALL、SELFDESTRUCT 等指令时，检查当前路径中是否存在受 TIMESTAMP 控制的分支，如果存在则说明存在时间戳依赖漏洞。
 
-以下是时间戳依赖漏洞检测的伪代码，算法的输入为字节码指令序列 I，输出为是否存在潜在时间戳依赖路径。算法的主要思路是通过符号执行引擎对字节码指令进行遍历，当遇到 TIMESTAMP 指令时，记录其结果为符号变量 t，并标记当前路径状态依赖于 t；当遇到 JUMPI 指令时，提取条件表达式 cond，如果 cond 中包含 t 的依赖，则标记该分支受 TIMESTAMP 控制；当遇到关键操作如 SSTORE、CALL、SELFDESTRUCT 等指令时，如果当前路径中存在受 TIMESTAMP 控制的分支，则说明存在时间戳依赖漏洞。
+% 以下是时间戳依赖漏洞检测的伪代码，算法的输入为字节码指令序列 I，输出为是否存在潜在时间戳依赖路径。算法的主要思路是通过符号执行引擎对字节码指令进行遍历，当遇到 TIMESTAMP 指令时，记录其结果为符号变量 t，并标记当前路径状态依赖于 t；当遇到 JUMPI 指令时，提取条件表达式 cond，如果 cond 中包含 t 的依赖，则标记该分支受 TIMESTAMP 控制；当遇到关键操作如 SSTORE、CALL、SELFDESTRUCT 等指令时，如果当前路径中存在受 TIMESTAMP 控制的分支，则说明存在时间戳依赖漏洞。
 
 \begin{algorithm}[H]
     \caption{时间戳依赖漏洞检测算法}
@@ -832,7 +869,6 @@ DoS 攻击的危害体现在多个维度：一方面，它破坏了合约的可�
 
 % \subsection{拒绝服务攻击漏洞实例}
 % 图 X 展示了 Gas 耗尽型 DoS 和外部调用阻塞型 DoS 的具体实例，函数的核心功能是组织拍卖并在结束时退款给所有参与者。合约的设计允许用户通过 bid 函数参与拍卖，并存储其存款。合约的 refundAll 函数用于将所有参与者的存款退还给他们，而 finalizeAuction 函数则用于结束拍卖并释放资金。合约代码如下：
-者的存款退还给他们
 % \begin{figure}[htbp]
 %     \centering
 %     \begin{minipage}{0.9\textwidth}
@@ -878,7 +914,7 @@ DoS 攻击的危害体现在多个维度：一方面，它破坏了合约的可�
 %     \caption{拒绝服务攻击漏洞合约}
 % \end{figure}
 
-% 在上述合约中，refundAll 函数存在 Gas 耗尽型 DoS 漏洞，漏洞的触发条件是 bidders 数组的长度 bidders.length 变得非常大。bid 函数允许任何人调用并向 bidders 数组添加元素，没有对数组大小施加任何限制。refundAll 函数需要遍历整个 bidders 数组。循环的每一次迭代都需要执行数组读取、deposits[bidder] 映射读取、条件判断、transfer（包含外部调用和状态检查）以及映射写入 deposits[bidder] = 0，即 SSTORE 操作。这些操作都需要消耗 Gas。当 bidders.length 足够大时，执行整个 for 循环所需的累计 Gas 将超过以太坊的区块 Gas 上限 (Block Gas Limit)一旦累计 Gas 超过区块 Gas 上限，任何调用 refundAll 函数的交易都会因 Gas 耗尽而失败并 revert。由于无法通过提高单笔交易的 Gas Limit 来突破区块 Gas 上限，该函数将变得永久不可用，导致所有投标人的押金被永久锁定在合约中。
+% 在上述合约中，refundAll 函数存在 Gas 耗尽型 DoS 漏洞，漏洞的触发条件是 bidders 数组的长度 bidders.length 变得~非常大。bid 函数允许任何人调用并向 bidders 数组添加元素，没有对数组大小施加任何限制。refundAll 函数需要遍历整个 bidders 数组。循环的每一次迭代都需要执行数组读取、deposits[bidder] 映射读取、条件判断、transfer（包含外部调用和状态检查）以及映射写入 deposits[bidder] = 0，即 SSTORE 操作。这些操作都需要消耗 Gas。当 bidders.length 足够大时，执行整个 for 循环所需的累计 Gas 将超过以太坊的区块 Gas 上限 (Block Gas Limit)一旦累计 Gas 超过区块 Gas 上限，任何调用 refundAll 函数的交易都会因 Gas 耗尽而失败并 revert。由于无法通过提高单笔交易的 Gas Limit 来突破区块 Gas 上限，该函数将变得永久不可用，导致所有投标人的押金被永久锁定在合约中。
 
 % 而 finalizeAuction 函数则存在外部调用阻塞型 DoS 漏洞，漏洞的触发条件是外部合约 externalChecker 的 check() 函数调用失败。finalizeAuction 函数的执行流程中，关键的状态转换 ended = true; 发生在对 externalChecker.check() 的调用并检查其返回值之后。如果 externalChecker.check() 由于任何原因，如 externalChecker 合约自身逻辑错误、状态异常、Gas 不足，或者被其所有者恶意设置为 revert 状态而失败并 revert，那么 require(canEnd, ...) 就会失败，导致 finalizeAuction 函数自身也 revert。如果 externalChecker.check() 的失败是持久性的或者可被攻击者重复触发，那么 finalizeAuction 函数将永远无法成功执行，导致状态变量 ended 永远无法变为 true。这会阻塞拍卖的正常结束流程，可能导致后续依赖 ended == true 状态的逻辑，如资金结算、所有权转移等也无法执行。
 
@@ -889,18 +925,11 @@ DoS 攻击的危害体现在多个维度：一方面，它破坏了合约的可�
 
 % 2. 外部依赖：合约执行关键的状态转换或核心功能，如改变核心状态标志、解锁资金、完成阶段性任务，依赖一次外部合约调用的成功执行，外部调用失败会导致包含关键转换/功能的当前函数revert，并且没有提供替代路径或机制来完成该关键转换或功能。
 
-% filepath: [3-漏洞原理分析及其检测方法.tex](http://_vscodecontentref_/0)
 \subsection{拒绝服务攻击漏洞实例}
 图\ref{fig:拒绝服务攻击漏洞合约}展示了 Gas 耗尽型 DoS 和外部调用阻塞型 DoS 的具体实例，函数的核心功能是组织拍卖并在结束时退款给所有参与者。合约的设计允许用户通过 bid 函数参与拍卖，并存储其存款。合约的 refundAll 函数用于将所有参与者的存款退还给他们，而 finalizeAuction 函数则用于结束拍卖并释放资金。合约代码如下：
-% \begin{minted}[
-%     fontsize=\large,
-%     linenos,
-%     numbersep=5pt,
-%     xleftmargin=2em,
-%     baselinestretch=1.0
-% ]{solidity}
 
-\begin{figure}[htbp]
+
+\begin{figure}
     \centering
     \begin{minipage}{0.9\textwidth}
     \begin{minted}[fontsize=\large, linenos, numbersep=5pt, xleftmargin=0em,baselinestretch=1.0]{solidity}
@@ -964,7 +993,7 @@ contract VulnerableAuction {
 
 对于外部调用阻塞型 DoS 漏洞，EVM 字节码中主要关注 CALL 指令的使用。CALL 指令用于向外部合约发送消息或调用函数，其返回值通常会影响后续的逻辑判断和状态更新，由于本文的检测逻辑只能从本合约的字节码进行分析，因此只能检测 CALL 指令的使用，而无法直接分析外部合约的实现逻辑。从这个角度，拒绝服务攻击漏洞和重入攻击漏洞的检测方法类似，都是通过 CALL 指令的使用来判断是否存在潜在的 DoS 漏洞，或者其实很难从字节码层面区分拒绝服务攻击漏洞和重入攻击漏洞。因此，接下来本文从 gas 耗尽型 DoS 漏洞的角度进行字节码层面的表征分析。
 
-图X 是 refundAll 函数对应的字节码序列示例，展示了 Gas 耗尽型 DoS 漏洞的特征模式。
+图\ref{fig:拒绝服务攻击漏洞字节码表征}是 refundAll 函数对应的字节码序列示例，展示了 Gas 耗尽型 DoS 漏洞的特征模式。
 
 \begin{figure}[htbp]
     \centering
@@ -986,7 +1015,7 @@ Gas 耗尽型 DoS 漏洞的字节码特征主要体现在以下几个方面：
 
 \subsection{拒绝服务攻击漏洞检测方法}
 
-由前面两节的分析可知，Gas 耗尽型 DoS 漏洞的核心在于循环结构的存在和循环条件可控性，以及循环体内的高 Gas 消耗指令。检测方法主要是通过对字节码进行静态分析，识别出所有的循环结构，并检查其终止条件是否依赖于外部存储的值，同时检查循环体内是否包含高 Gas 消耗指令，如 SSTORE、CALL 等。最后还需要检查循环体内是否存在 GAS 指令检查剩余 Gas 的机制。如算法 X 所示：
+由前面两节的分析可知，Gas 耗尽型 DoS 漏洞的核心在于循环结构的存在和循环条件可控性，以及循环体内的高 Gas 消耗指令。检测方法主要是通过对字节码进行静态分析，识别出所有的循环结构，并检查其终止条件是否依赖于外部存储的值，同时检查循环体内是否包含高 Gas 消耗指令，如 SSTORE、CALL 等。最后还需要检查循环体内是否存在 GAS 指令检查剩余 Gas 的机制。如算法\ref{alg:gas_dos_detection}所示：
 
 
 \begin{algorithm}[H]
@@ -1025,7 +1054,8 @@ Gas 耗尽型 DoS 漏洞的字节码特征主要体现在以下几个方面：
     }
     
     \Return \textbf{False}
-    \end{algorithm}
+    \label{alg:gas_dos_detection}
+\end{algorithm}
     
 
 \section{本章小结}
@@ -1055,7 +1085,7 @@ Gas 耗尽型 DoS 漏洞的字节码特征主要体现在以下几个方面：
 
 \subsection{系统架构}
 
-基于上述设计原则，本文提出的 ByteChecker 系统架构如图 X 所示，主要包括以下六大模块：
+基于上述设计原则，本文提出的 ByteChecker 系统架构如图\ref{fig:系统架构图}所示，主要包括以下六大模块：
 
 \begin{figure}[htbp]
     \centering
@@ -1146,7 +1176,7 @@ Gas 耗尽型 DoS 漏洞的字节码特征主要体现在以下几个方面：
 
 \subsubsection{EVM 指令符号化模拟}
 系统为每个 EVM 操作码实现一个处理函数。该函数接收当前的 SymbolicState，根据指令的语义，更新栈、内存、存储、PC、Gas、路径条件等，并返回更新后的一个或多个后继
-状态，算法 X 是对主要各个指令的模拟逻辑的简要描述，主要选取了栈操作指令 PUSH，运算指令 ADD，存储访问指令 SLOAD，控制流指令 JUMPI，四个具有代表性的指令，对于内存的读写指令 MLOAD/MSTORE 执行逻辑类似于 SLOAD/SSTORE。
+状态，表\ref{tab:evm_symbolic_simulation}是对主要各个指令的模拟逻辑的简要描述，主要选取了栈操作指令 PUSH，运算指令 ADD，存储访问指令 SLOAD，控制流指令 JUMPI，四个具有代表性的指令，对于内存的读写指令 MLOAD/MSTORE 执行逻辑类似于 SLOAD/SSTORE。
 
 
 % ...existing code...
@@ -1883,11 +1913,11 @@ ByteChecker 系统的开发与测试环境主要基于以下组件和库，具�
 
 
 \section{系统工作流程}
-ByteChecker 系统各模块间工作流程如图 X 所示，具体步骤如下：
+ByteChecker 系统各模块间工作流程如图\ref{fig:系统工作流程}所示，具体步骤如下：
 
-\begin{figure}[htbp]
+\begin{figure}
     \centering
-    \includegraphics[width=0.8\linewidth]{系统工作流程}
+    \includegraphics[width=0.7\linewidth]{系统工作流程}
     \caption{系统工作流程}
     \label{fig:系统工作流程}
 \end{figure}
@@ -2014,7 +2044,7 @@ F1\text{-}score = \frac{2 \times Precision \times Recall}{Precision + Recall}
 
 为了全面评估并在不同场景下验证 ByteChecker，构建了一个包含三类合约的数据集：
 
-1. 标准数据集：这个数据集由 112 个人工审阅的智能合约组成，包含了186 个漏洞点，合约来自以往智能合约安全研究者释出的数据集，在此基础上筛选出包含本研究关注的四种漏洞类型的合约。由于这个数据集经过了反复的人工审阅和标注，因此可以认为其 Ground Truth 是可靠的。此数据集主要用于验证 Bytecheck 的功能性，即对合约漏洞检测的准确性。数据集中的漏洞类型包括重入、整数溢出、时间依赖和拒绝服务漏洞，经统计各种类型类型漏洞分布如表\ref{tab:vulnerability_distribution}：
+1. 标准数据集：这个数据集由 112 个人工审阅的智能合约组成，包含了186 个漏洞点，合约来自以往智能合约安全研究者释出的数据集\cite{}\cite{}\cite{}\cite{}，在此基础上筛选出包含本研究关注的四种漏洞类型的合约。由于这个数据集经过了反复的人工审阅和标注，因此可以认为其 Ground Truth 是可靠的。此数据集主要用于验证 Bytecheck 的功能性，即对合约漏洞检测的准确性。数据集中的漏洞类型包括重入、整数溢出、时间依赖和拒绝服务漏洞，经统计各种类型类型漏洞分布如表\ref{tab:vulnerability_distribution}：
 
 \begin{table}[h]
     \centering
@@ -2032,9 +2062,9 @@ F1\text{-}score = \frac{2 \times Precision \times Recall}{Precision + Recall}
     \label{tab:vulnerability_distribution}
 \end{table}
     
-2. 有源码的真实世界合约数据集：这个数据集使用的是 Thomas Durieux 在研究中使用的来自以太坊区块量上的数据集，包含了共 47587 个智能合约源代码，由于这份数据集并没有提供明显的标注，因此其 Ground Truth 来自于几种漏洞检测工具之间的交叉验证，以及人工审阅，此数据集主要用与横向对比 Oyente ， Mythril 和 Slither，评估 ByteChecker 的准确性和效率。
+2. 有源码的真实世界合约数据集：这个数据集使用的是 Thomas Durieux \cite{}在研究中使用的来自以太坊区块量上的数据集，包含了共 47587 个智能合约源代码，由于这份数据集并没有提供明显的标注，因此其 Ground Truth 来自于几种漏洞检测工具之间的交叉验证，以及人工审阅，此数据集主要用与横向对比 Oyente ， Mythril 和 Slither，评估 ByteChecker 的准确性和效率。
 
-3. 无源码的真实世界合约数据集：这个数据集包含了 1000 个以太坊公链上的真实合约，使用 Etherscan 提供的 API 接口从以太坊区块链上抓取的合约字节码，这个数据集的目的是为了评估 ByteChecker 在使用和不适用静态分析模块情况下检测的效率，因此，为了让实验更具有普遍性，抓取过程中，将字节码长度均匀分布在 1KB 到 24KB 之间的合约进行抓取，用字节码长度近似合约复杂度。
+3. 无源码的真实世界合约数据集：这个数据集包含了 1000 个以太坊公链上的真实合约，使用 Etherscan \cite{}提供的 API 接口从以太坊区块链上抓取的合约字节码，这个数据集的目的是为了评估 ByteChecker 在使用和不适用静态分析模块情况下检测的效率，因此，为了让实验更具有普遍性，抓取过程中，将字节码长度均匀分布在 1KB 到 24KB 之间的合约进行抓取，用字节码长度近似合约复杂度。
 \subsection{实验设计}
 
 为系统性地回答第 5.1 节提出的三个研究问题，我们设计了以下三个实验，分别侧重于准确性评估、效率与对比分析、以及静态分析引导机制的有效性验证。
@@ -2076,12 +2106,11 @@ F1\text{-}score = \frac{2 \times Precision \times Recall}{Precision + Recall}
 
 \subsection{检测准确性分析}
 
-我们首先在标准数据集（主要基于 SmartBug Dataset）上评估 \text{ByteChecker} 检测四种目标漏洞的准确性。表 X 汇总了主要的有效性指标。
+我们首先在标准数据集（主要基于 SmartBug Dataset）上评估 \text{ByteChecker} 检测四种目标漏洞的准确性。表\ref{tab:accuracy_results_ch5}汇总了主要的有效性指标。
 
-\begin{table}[H]
+\begin{table}
     \centering
     \caption{ByteChecker 在标准数据集上的检测准确性结果}
-    \label{tab:accuracy_results_ch5}
     \begin{tabular}{lccccc}
     \toprule
     指标 & 重入 & 整数溢出 & 时间依赖 & 拒绝服务 & \textbf{总体} \\ 
@@ -2095,6 +2124,7 @@ F1\text{-}score = \frac{2 \times Precision \times Recall}{Precision + Recall}
     F1-Score (\%) & \textbf{72.9\%} & \textbf{73.7\%} & \textbf{75.7\%} & \textbf{76.2\%} & \textbf{74.6\%} \\ 
     \bottomrule
     \end{tabular}
+    \label{tab:accuracy_results_ch5}
 \end{table}
 
     
@@ -2115,9 +2145,8 @@ F1\text{-}score = \frac{2 \times Precision \times Recall}{Precision + Recall}
 \begin{figure}[H]
     \centering
     \begin{minipage}{0.9\textwidth}
-    \begin{minted}[fontsize=\small, linenos, numbersep=5pt, xleftmargin=2em]{solidity}
+    \begin{minted}[fontsize=\small, linenos, numbersep=5pt, xleftmargin=0em,baselinestretch=0.3]{solidity}
 contract SavingsManager {
-
 function claim() external {
     address payable recipient = payable(tx.origin);
     uint256 payout = _calculatePayout(recipient);
@@ -2126,10 +2155,12 @@ function claim() external {
         _dispatch(recipient, payout);
     }
 }
-function _calculatePayout(address user) internal view returns (uint256) {
+function _calculatePayout(address user) 
+        internal view returns (uint256) {
     return uint256(accounts[user].balance);
 }
-function _validate(address user, uint256 amount) internal view returns (bool) {
+function _validate(address user, uint256 amount) 
+        internal view returns (bool) {
     return amount > 1 ether; 
 }
 function _dispatch(address payable user, uint256 amount) internal {
@@ -2141,9 +2172,10 @@ function _dispatch(address payable user, uint256 amount) internal {
     \end{minted}
     \end{minipage}
     \caption{重入漏报}
+    \label{fig:reentrancy_miss}
 \end{figure}
 
-如图 X 的简化合约所示，合约存在一个隐藏的重入漏洞，用户通过 claim 函数发起提现操作，提现金额 amount 通过结构体字段间接获得，完成 \_validate 函数校验后，最终通过 \_dispatch() 进行外部调用。经过分析，该漏洞点未被 ByteChecker 检测出来，主要原因为：ByteChecker 对当前合约进行字节码分析，当重入的关键 CALL 指令位于多层内部函数，而调用入口又包含了多层逻辑分支与路径控制时，工具很难在字节码层面还原函数之间的真实控制流关系。同时，CALL 转账金额并非直接来自 msg.value ，而是通过中间变量传递、结构体字段索引等形式实现，这进一步增加了数据追踪的困难。
+如图\ref{fig:reentrancy_miss}的简化合约所示，合约存在一个隐藏的重入漏洞，用户通过 claim 函数发起提现操作，提现金额 amount 通过结构体字段间接获得，完成 \_validate 函数校验后，最终通过 \_dispatch() 进行外部调用。经过分析，该漏洞点未被 ByteChecker 检测出来，主要原因为：ByteChecker 对当前合约进行字节码分析，当重入的关键 CALL 指令位于多层内部函数，而调用入口又包含了多层逻辑分支与路径控制时，工具很难在字节码层面还原函数之间的真实控制流关系。同时，CALL 转账金额并非直接来自 msg.value ，而是通过中间变量传递、结构体字段索引等形式实现，这进一步增加了数据追踪的困难。
 
 类似这样的漏报其实本质是一个安全和效率的权衡问题，对于非常不典型的重入漏洞场景，对其特征进行兼容性建模会严重影响系统的运行效率。
 
@@ -2170,7 +2202,7 @@ function _dispatch(address payable user, uint256 amount) internal {
 
 \textbf{结果分析：}
 
-从表 X 的数据可以看出不同工具在分析效率上的显著差异，这与其采用的核心技术密切相关。
+从表\ref{tab:efficiency_comparison}的数据可以看出不同工具在分析效率上的显著差异，这与其采用的核心技术密切相关。
 
 1.  Slither 作为纯静态分析工具，其分析速度最快，平均时间和中位数时间均远低于其他工具。其分析时间主要取决于合约结构复杂度和需要检查的模式数量，不受路径爆炸等动态执行问题的影响，因此最短和最长时间跨度相对较小，且没有出现超时情况。这符合静态分析通常具有较高效率的预期。
 
@@ -2228,6 +2260,7 @@ function _dispatch(address payable user, uint256 amount) internal {
 
 \subsection{实验总结}
 
+
 本章通过在标准数据集和真实世界合约数据集上进行的一系列实验，对本文提出的基于字节码静态分析与符号执行的漏洞检测系统 ByteChecker 进行了全面评估，旨在回答引言中提出的三个研究问题 (RQ1-RQ3)。主要实验结论总结如下：
 
 1.  准确性 (RQ1): 在包含 186 个已知漏洞的标准数据集上，ByteChecker 展现了良好的整体检测能力。其宏平均 F1 分数达到 74.6\%，精确率为 72.1\%，召回率为 77.1\%。在四种目标漏洞类型中，对拒绝服务（F1: 76.2\%）和时间依赖（F1: 75.7\%）的检测效果尤为突出，对整数溢出（F1: 73.7\%）和重入（F1: 72.9\%）也表现出有效的检测能力。对漏报案例的分析表明，复杂的控制流和难以求解的路径约束是当前方法面临的主要挑战。
@@ -2239,5 +2272,30 @@ function _dispatch(address payable user, uint256 amount) internal {
 4.  局限性: 实验也揭示了 ByteChecker 的局限性。对于依赖复杂外部交互或精确资源建模的漏洞（如某些时间依赖和 Gas 相关的 DoS），字节码层面的分析仍存挑战，可能导致误报或漏报。同时，对于规模极大或状态空间极其庞大的合约，分析时间和内存消耗依然是瓶颈，尽管静态引导有所缓解。
 
 综上所述，实验结果表明，本文提出的 ByteChecker 系统作为一种结合字节码静态分析与符号执行的混合方法，在检测特定类型的智能合约漏洞方面是有效且具有竞争力的。它在准确性和效率之间取得了较好的平衡，并通过静态分析引导显著提升了符号执行的可行性。然而，在处理特定复杂漏洞场景和极端规模合约方面仍存在改进空间，为未来的研究指明了方向。
+
+% ...existing code...
+\chapter{总结与展望}
+
+\section{全文总结}
+
+随着区块链技术的蓬勃发展，智能合约已成为构建去中心化应用的核心基石。然而，其承载高价值资产且部署后通常不可更改的特性，使得安全问题尤为突出。频发的安全事件不仅造成了巨额经济损失，更严重打击了用户信心，阻碍了技术的广泛应用。现有的智能合约漏洞检测方法，如静态分析、动态分析、符号执行和形式化验证等，虽然取得了一定进展，但在检测精度、效率、自动化程度以及对复杂漏洞模式的处理能力上仍存在各自的局限性，难以完全满足实际需求。特别是在缺乏源代码、只能分析 EVM 字节码的场景下，现有工具面临更大挑战。
+
+针对上述问题，本文聚焦于 EVM 字节码层面，旨在设计并实现一种更有效、更高效的自动化漏洞检测方法。研究工作主要围绕以下几个方面展开：首先，深入分析了四种典型且危害严重的智能合约漏洞——重入、整数溢出、时间依赖和拒绝服务攻击——的产生原理、攻击模式及其在 EVM 字节码层面的具体指令序列和状态转换特征，为后续的自动化检测奠定了理论基础。
+
+其次，基于对漏洞字节码特征的理解，本文提出了一种结合轻量级静态分析与符号执行的混合式漏洞检测方法。该方法的核心创新在于利用静态分析快速识别潜在的漏洞候选点，并以此引导后续的动态符号执行，使其能够更聚焦于高风险的代码路径，从而在保证分析深度的同时，有效缓解符号执行固有的路径爆炸问题，提升整体分析效率。
+
+再次，基于所提出的混合分析方法，本文设计并实现了一个名为 ByteChecker 的原型系统。详细阐述了系统的整体架构，包括输入处理、预处理（字节码反汇编、CFG 构建）、核心分析引擎（包含静态分析模块、动态符号执行模块、漏洞检测逻辑）以及结果处理与报告等关键模块的设计细节。重点介绍了符号执行引擎如何进行状态建模、指令符号化模拟、与 Z3 约束求解器的交互，以及静态分析模块如何通过模式匹配和污点分析生成候选点，动态分析模块如何采用启发式引导的 DFS 策略进行路径探索和验证。
+
+最后，通过在标准数据集和真实世界合约数据集上进行的一系列实验，对 ByteChecker 系统的性能进行了全面评估。实验结果表明：在准确性方面，ByteChecker 对四种目标漏洞展现了良好的检测能力（总体 F1 分数 74.6\%）；在效率方面，其分析速度显著优于纯符号执行工具 Mythril，验证了混合方法的优势；关键的静态分析引导机制被证明能够有效降低分析时间和路径探索复杂度（平均时间减少 27.2\%，路径数减少 39.9\%），且未牺牲检测能力。
+
+\section{后续工作展望}
+
+尽管 ByteChecker 在智能合约漏洞检测方面取得了一定成效，但仍存在显著的改进空间和未来研究方向。首先，在提升分析精度与广度方面，当前方法在处理极端复杂合约逻辑或依赖精细外部环境建模（如多合约交互、精确 Gas 消耗）的漏洞时仍面临挑战。未来的研究可以探索更高级的程序分析技术，例如将抽象解释与符号执行更紧密地结合，或者开发专门的多合约交互分析方法，以更准确地捕捉复杂场景下的漏洞。同时，ByteChecker 目前专注于四种典型漏洞，未来可扩展其字节码特征库和检测逻辑，以支持更广泛的漏洞类型检测，例如访问控制缺陷、业务逻辑错误、代理合约相关问题等，从而构建更全面的安全分析能力。
+
+其次，在优化分析效率与可扩展性方面，虽然静态分析引导机制已证明有效，但效率仍有提升潜力。可以研究更先进的路径选择启发式策略，例如结合机器学习预测高风险路径或基于信息增益的探索策略，进一步聚焦于最可能包含漏洞的代码区域。探索并行或分布式符号执行技术，将路径探索任务分解到多个计算单元，有望大幅缩短对大型或复杂合约的分析时间。此外，将符号执行与模糊测试（Fuzzing）、机器学习等其他技术进行更深层次的融合，例如利用 Fuzzing 快速覆盖浅层路径并生成种子输入，再由符号执行进行深度探索，也是一个充满前景的方向。
+
+最后，提升工具的易用性与实际集成度对于推动研究成果落地至关重要。未来的工作可以着力于优化漏洞报告的详细程度和可理解性，例如提供更清晰的触发路径、变量值示例，甚至结合反编译结果进行可视化展示。将 ByteChecker 集成到常见的智能合约开发框架（如 Hardhat, Truffle）或持续集成/持续部署（CI/CD）流水线中，使其成为开发和审计过程中的自动化安全检查环节，实现“安全左移”。随着区块链生态的发展，将本文提出的混合分析思想和技术扩展应用于新兴的区块链平台和虚拟机（如基于 WASM 的 VM），以应对其特有的安全挑战，也是未来值得努力的方向。总之，智能合约安全是一个持续演化的领域，未来的研究需在技术深度和广度上不断突破，并更加注重工具的实用性和生态融合。
+% ...existing code...
+
 
 \end{document}
